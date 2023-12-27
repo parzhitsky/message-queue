@@ -3,7 +3,6 @@ dist
 dist-ssr
 *.local
 coverage
-packages/client/vite.config.ts*.js
 packages/playground/src/*
 !packages/playground/src/.gitkeep
 
