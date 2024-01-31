@@ -55,20 +55,3 @@ export function defer<Value>(): Deferred<Value> {
 
   return deferred
 }
-
-class Person {
-  constructor(
-    public readonly sex: 'male' | 'female',
-    public readonly name: string,
-  ) {}
-
-  greet() {
-    console.log(`Good evening, ${this.sex === 'male' ? 'Mr' : 'Mrs'} ${this.name}!`)
-  }
-}
-
-function createPerson(sex: 'male' | 'female', name: string) {
-  const person = new Person(sex, name)
-
-  return person
-}
