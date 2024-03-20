@@ -5,6 +5,7 @@ import { randomChoice } from '@@shared/random/random-choice.js'
 import { Broker } from './message-queue/broker.js'
 import { Consumer } from './message-queue/consumer.js'
 import { type Message } from './message-queue/message.type.js'
+import { Producer } from './message-queue/producer.js'
 
 type Warehouse = Record<string, number>
 
@@ -76,6 +77,8 @@ class WarehouseInspector {
   }
 }
 
+const warehouse: Warehouse = {}
+
 type WarehouseOperation = { operation: 'add' | 'remove', item: string, quantity: number }
 type PrepareOperation = { operation: 'prepare' }
 type InspectOperation = { operation: 'inspect', inspectorName: string }
@@ -84,16 +87,17 @@ type InspectionOperation =
   | PrepareOperation
   | InspectOperation
 
-type DataMap = {
-  'warehouse': WarehouseOperation
-  'inspection': InspectionOperation
+const enum MessageType {
+  Warehouse = 'Warehouse',
+  Inspection = 'Inspection',
 }
 
-const broker = new Broker<DataMap>()
-const warehouse: Warehouse = {}
+class WarehouseOperationProducer extends Producer<MessageType.Warehouse, WarehouseOperation> {}
 
-class WarehouseOperationConsumer extends Consumer<'warehouse', WarehouseOperation> {
-  protected override doConsume(message: Message<'warehouse', WarehouseOperation>): void {
+class InspectionOperationProducer extends Producer<MessageType.Inspection, InspectionOperation> {}
+
+class WarehouseOperationConsumer extends Consumer<MessageType.Warehouse, WarehouseOperation> {
+  protected override doConsume(message: Message<MessageType.Warehouse, WarehouseOperation>): void {
     const { operation, item, quantity } = message.data
 
     warehouse[item] ??= 0
@@ -112,8 +116,8 @@ class WarehouseOperationConsumer extends Consumer<'warehouse', WarehouseOperatio
   }
 }
 
-class InspectionOperationConsumer extends Consumer<'inspection', InspectionOperation> {
-  protected override doConsume(message: Message<'inspection', InspectionOperation>): void {
+class InspectionOperationConsumer extends Consumer<MessageType.Inspection, InspectionOperation> {
+  protected override doConsume(message: Message<MessageType.Inspection, InspectionOperation>): void {
     switch (message.data.operation) {
       case 'prepare':
         console.log(cleanWarehouse(warehouse))
@@ -131,12 +135,21 @@ class InspectionOperationConsumer extends Consumer<'inspection', InspectionOpera
   }
 }
 
-const warehouseOperationConsumer = new WarehouseOperationConsumer('warehouse')
-const inspectionOperationConsumer = new InspectionOperationConsumer('inspection')
+const warehouseOperationProducer = new WarehouseOperationProducer(MessageType.Warehouse)
+const inspectionOperationProducer = new InspectionOperationProducer(MessageType.Inspection)
+const warehouseOperationConsumer = new WarehouseOperationConsumer(MessageType.Warehouse)
+const inspectionOperationConsumer = new InspectionOperationConsumer(MessageType.Inspection)
 
-const warehouseOperationConsumerRegistration = broker.registerConsumer(warehouseOperationConsumer)
+type DataMap = {
+  [MessageType.Warehouse]: WarehouseOperation
+  [MessageType.Inspection]: InspectionOperation
+}
 
-broker.registerConsumer(inspectionOperationConsumer) // registration is not used
+const broker = new Broker<DataMap>()
+  .addProducer(warehouseOperationProducer)
+  .addProducer(inspectionOperationProducer)
+  .addConsumer(warehouseOperationConsumer)
+  .addConsumer(inspectionOperationConsumer)
 
 // ***
 
@@ -162,6 +175,7 @@ const cli = createInterface({
   },
 })
 
+broker.start()
 cli.prompt()
 
 loop:
@@ -176,7 +190,7 @@ for await (const line of cli) {
       break loop
 
     case CliCommand.Unregister:
-      warehouseOperationConsumerRegistration.cancel()
+      broker.removeConsumer(inspectionOperationConsumer)
       break
 
     case CliCommand.Log:
@@ -184,7 +198,7 @@ for await (const line of cli) {
       break
 
     case CliCommand.Add:
-      broker.produce('warehouse', {
+      warehouseOperationProducer.produce({
         operation: 'add',
         item,
         quantity,
@@ -192,7 +206,7 @@ for await (const line of cli) {
       break
 
     case CliCommand.Remove:
-      broker.produce('warehouse', {
+      warehouseOperationProducer.produce({
         operation: 'remove',
         item,
         quantity: Math.min(quantity, warehouse[item] ?? 0),
@@ -200,13 +214,13 @@ for await (const line of cli) {
       break
 
     case CliCommand.Prepare:
-      broker.produce('inspection', {
+      inspectionOperationProducer.produce({
         operation: 'prepare',
       })
       break
 
     case CliCommand.Inspect:
-      broker.produce('inspection', {
+      inspectionOperationProducer.produce({
         operation: 'inspect',
         inspectorName: randomChoice(inspectorNames),
       })
