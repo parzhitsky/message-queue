@@ -1,69 +1,115 @@
 import { Consumer } from './consumer.js'
-import { type MessageType, type MessageTypeOf, type MessageTypeToDataMapAny } from './message.type.js'
+import { type MessageTypeOf, type MessageTypeToDataMapAny } from './message.type.js'
 import { type Messages, Producer } from './producer.js'
 
 /** @private */
-type ProducerByMessageType<DataMap extends MessageTypeToDataMapAny, Type extends MessageTypeOf<DataMap>> = Producer<Type, DataMap[Type]>
+type ProducerByDataMap<
+  DataMap extends MessageTypeToDataMapAny,
+  Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
+> =
+  Producer<Type, DataMap[Type]>
 
 /** @private */
-type ConsumerByMessageType<DataMap extends MessageTypeToDataMapAny, Type extends MessageTypeOf<DataMap>> = Consumer<Type, DataMap[Type]>
+type ConsumerByDataMap<
+  DataMap extends MessageTypeToDataMapAny,
+  Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
+> =
+  Consumer<Type, DataMap[Type]>
 
 /** @private */
-type MessageTypeToProducerMap<out DataMap extends MessageTypeToDataMapAny> = {
-  [Type in MessageTypeOf<DataMap>]: ProducerByMessageType<DataMap, Type>
-}
+type MessagesByDataMap<
+  DataMap extends MessageTypeToDataMapAny,
+  Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
+> =
+  Messages<Type, DataMap[Type]>
 
-/** @private */
-class ConsumerRegistration {
-  constructor(protected readonly messages: Messages<MessageType, unknown>) {}
+export class Broker<const DataMap extends MessageTypeToDataMapAny> {
+  protected readonly producers: ProducerByDataMap<DataMap>[] = []
+  protected readonly consumers: ConsumerByDataMap<DataMap>[] = []
+  protected readonly messagesLists = new WeakMap<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
 
-  cancel(): void {
-    this.messages.cancel()
-  }
-}
+  protected getMessagesList<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): MessagesByDataMap<DataMap, Type>[] | null {
+    const messagesList = this.messagesLists.get(producer) as MessagesByDataMap<DataMap, Type>[] | undefined
 
-export class Broker<const out DataMap extends MessageTypeToDataMapAny> {
-  protected readonly messageTypeToProducerMap = Object.create(null) as MessageTypeToProducerMap<DataMap>
-  protected readonly consumerRegistrations: ConsumerRegistration[] = []
-
-  protected getProducer<const Type extends MessageTypeOf<DataMap>>(messageType: Type): ProducerByMessageType<DataMap, Type> | undefined {
-    return this.messageTypeToProducerMap[messageType]
+    return messagesList ?? null
   }
 
-  protected getOrCreateProducer<const Type extends MessageTypeOf<DataMap>>(messageType: Type): ProducerByMessageType<DataMap, Type> {
-    return this.messageTypeToProducerMap[messageType] ??= new Producer<Type, DataMap[Type]>(messageType)
+  protected getOrCreateMessagesList<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): MessagesByDataMap<DataMap, Type>[] {
+    if (!this.messagesLists.has(producer)) {
+      this.messagesLists.set(producer, [])
+    }
+
+    const messagesList = this.getMessagesList(producer)!
+
+    return messagesList
   }
 
-  registerConsumer<const Type extends MessageTypeOf<DataMap>>(consumer: ConsumerByMessageType<DataMap, Type>): ConsumerRegistration {
-    const messages = this.getOrCreateProducer(consumer.messageType).messages()
-    const registration = new ConsumerRegistration(messages)
+  addProducer<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): this {
+    this.producers.push(producer)
 
-    this.consumerRegistrations.push(registration)
+    return this
+  }
 
-    Promise.resolve().then(async () => {
-      for await (const message of messages) {
-        consumer.consume(message)
+  addConsumer<const Type extends MessageTypeOf<DataMap>>(consumer: ConsumerByDataMap<DataMap, Type>): this {
+    this.consumers.push(consumer)
+
+    return this
+  }
+
+  removeProducer(producer: ProducerByDataMap<DataMap>): void {
+    const index = this.producers.indexOf(producer)
+
+    if (index === -1) {
+      return
+    }
+
+    this.producers.splice(index, 1)
+
+    const messagesList = this.getMessagesList(producer)
+
+    for (const messages of messagesList ?? []) {
+      messages.cancel()
+    }
+
+    this.messagesLists.delete(producer)
+  }
+
+  removeConsumer(consumer: ConsumerByDataMap<DataMap>): void {
+    const index = this.consumers.indexOf(consumer)
+
+    if (index !== -1) {
+      this.consumers.splice(index, 1)
+    }
+  }
+
+  protected async broadcastMessages(messages: MessagesByDataMap<DataMap>): Promise<void> {
+    for await (const message of messages) {
+      for (const consumer of this.consumers) {
+        if (consumer.canConsume(message)) {
+          consumer.consume(message)
+        }
       }
-    })
-
-    return registration
+    }
   }
 
-  produce<const Type extends MessageTypeOf<DataMap>>(messageType: Type, data: DataMap[Type]): void {
-    this.getOrCreateProducer(messageType).produce(data)
-  }
+  start(): this {
+    for (const producer of this.producers) {
+      const messages = producer.messages()
 
-  closeProducer<const Type extends MessageTypeOf<DataMap>>(messageType: Type): void {
-    this.getProducer(messageType)?.close()
+      this.getOrCreateMessagesList(producer).push(messages)
+      this.broadcastMessages(messages)
+    }
+
+    return this
   }
 
   stop(): void {
-    for (const registration of this.consumerRegistrations) {
-      registration.cancel()
+    for (const producer of this.producers) {
+      this.removeProducer(producer)
     }
 
-    for (const producer of Object.values(this.messageTypeToProducerMap)) {
-      producer.close()
+    for (const consumer of this.consumers) {
+      this.removeConsumer(consumer)
     }
   }
 }
