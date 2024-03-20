@@ -1,29 +1,29 @@
 import { Consumer } from './consumer.js'
-import { type MessageTypeOf, type MessageTypeToDataMapAny } from './message.type.js'
+import { type MessageTypeOf, type MessageTypeToDataMapUnknown } from './message.type.js'
 import { type Messages, Producer } from './producer.js'
 
 /** @private */
 type ProducerByDataMap<
-  DataMap extends MessageTypeToDataMapAny,
+  DataMap extends MessageTypeToDataMapUnknown,
   Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
 > =
   Producer<Type, DataMap[Type]>
 
 /** @private */
 type ConsumerByDataMap<
-  DataMap extends MessageTypeToDataMapAny,
+  DataMap extends MessageTypeToDataMapUnknown,
   Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
 > =
   Consumer<Type, DataMap[Type]>
 
 /** @private */
 type MessagesByDataMap<
-  DataMap extends MessageTypeToDataMapAny,
+  DataMap extends MessageTypeToDataMapUnknown,
   Type extends MessageTypeOf<DataMap> = MessageTypeOf<DataMap>,
 > =
   Messages<Type, DataMap[Type]>
 
-export class Broker<const DataMap extends MessageTypeToDataMapAny> {
+export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
   protected readonly producers: ProducerByDataMap<DataMap>[] = []
   protected readonly consumers: ConsumerByDataMap<DataMap>[] = []
   protected readonly messagesLists = new WeakMap<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
