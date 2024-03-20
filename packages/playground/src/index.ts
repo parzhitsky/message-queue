@@ -150,6 +150,7 @@ const broker = new Broker<DataMap>()
   .addProducer(inspectionOperationProducer)
   .addConsumer(warehouseOperationConsumer)
   .addConsumer(inspectionOperationConsumer)
+  .start()
 
 // ***
 
@@ -175,7 +176,6 @@ const cli = createInterface({
   },
 })
 
-broker.start()
 cli.prompt()
 
 loop:

@@ -27,6 +27,7 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
   protected readonly producers: ProducerByDataMap<DataMap>[] = []
   protected readonly consumers: ConsumerByDataMap<DataMap>[] = []
   protected readonly messagesLists = new WeakMap<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
+  protected started = false
 
   protected getMessagesList<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): MessagesByDataMap<DataMap, Type>[] | null {
     const messagesList = this.messagesLists.get(producer) as MessagesByDataMap<DataMap, Type>[] | undefined
@@ -93,12 +94,16 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
   }
 
   start(): this {
-    for (const producer of this.producers) {
-      const messages = producer.messages()
+    if (!this.started) {
+      for (const producer of this.producers) {
+        const messages = producer.messages()
 
-      this.getOrCreateMessagesList(producer).push(messages)
-      this.broadcastMessages(messages)
+        this.getOrCreateMessagesList(producer).push(messages)
+        this.broadcastMessages(messages)
+      }
     }
+
+    this.started = true
 
     return this
   }
@@ -111,5 +116,7 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     for (const consumer of this.consumers) {
       this.removeConsumer(consumer)
     }
+
+    this.started = false
   }
 }
