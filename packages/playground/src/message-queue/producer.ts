@@ -2,11 +2,12 @@ import { AsyncIterableIteratorCancellable } from '@/async-iterable-iterator-canc
 import { defer } from '@/defer/defer.js'
 import { type Dequeued, Queue } from '@/queue/queue.js'
 import { type Message, type MessageType } from './message.type.js'
+import { type Closable } from './closable.type.js'
 
 export class Messages<const out Type extends MessageType, Data>
   extends AsyncIterableIteratorCancellable<Message<Type, Data>> {}
 
-export class Producer<const out Type extends MessageType, Data> {
+export class Producer<const out Type extends MessageType, Data> implements Closable {
   protected readonly dataQueue = new Queue<Data>()
   protected hasData = defer<boolean>()
   protected closed = false
