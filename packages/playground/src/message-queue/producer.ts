@@ -3,6 +3,9 @@ import { defer } from '@/defer/defer.js'
 import { type Dequeued, Queue } from '@/queue/queue.js'
 import { type Message, type MessageType } from './message.type.js'
 
+export class Messages<const out Type extends MessageType, Data>
+  extends AsyncIterableIteratorCancellable<Message<Type, Data>> {}
+
 export class Producer<const out Type extends MessageType, Data> {
   protected readonly dataQueue = new Queue<Data>()
   protected hasData = defer<boolean>()
@@ -48,11 +51,11 @@ export class Producer<const out Type extends MessageType, Data> {
     }
   }
 
-  messages(): AsyncIterableIteratorCancellable<Message<Type, Data>> {
-    const messages = this.iterate()
-    const messagesCancellable = new AsyncIterableIteratorCancellable(messages)
+  messages(): Messages<Type, Data> {
+    const messagesIterator = this.iterate()
+    const messages = new Messages(messagesIterator)
 
-    return messagesCancellable
+    return messages
   }
 }
 

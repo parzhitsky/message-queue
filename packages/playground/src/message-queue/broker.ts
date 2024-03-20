@@ -1,7 +1,6 @@
-import { type Cancellable } from '@/async-iterable-iterator-cancellable/cancellable.type.js'
 import { Consumer } from './consumer.js'
 import { type MessageType, type MessageTypeOf, type MessageTypeToDataMapAny } from './message.type.js'
-import { Producer } from './producer.js'
+import { type Messages, Producer } from './producer.js'
 
 /** @private */
 type ProducerByMessageType<DataMap extends MessageTypeToDataMapAny, Type extends MessageTypeOf<DataMap>> = Producer<Type, DataMap[Type]>
@@ -16,10 +15,10 @@ type MessageTypeToProducerMap<out DataMap extends MessageTypeToDataMapAny> = {
 
 /** @private */
 class ConsumerRegistration {
-  constructor(protected readonly cancellable: Cancellable) {}
+  constructor(protected readonly messages: Messages<MessageType, unknown>) {}
 
   cancel(): void {
-    this.cancellable.cancel()
+    this.messages.cancel()
   }
 }
 
