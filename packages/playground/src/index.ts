@@ -92,7 +92,7 @@ type DataMap = {
 const broker = new Broker<DataMap>()
 const warehouse: Warehouse = {}
 
-class WarehouseOperationConsumer extends broker.getConsumerBaseClassForMessageType('warehouse') {
+class WarehouseOperationConsumer extends Consumer<'warehouse', WarehouseOperation> {
   protected override doConsume(message: Message<'warehouse', WarehouseOperation>): void {
     const { operation, item, quantity } = message.data
 
@@ -131,8 +131,8 @@ class InspectionOperationConsumer extends Consumer<'inspection', InspectionOpera
   }
 }
 
-const warehouseOperationConsumer = new WarehouseOperationConsumer() // dynamic-class-derived constructors don't need the argument
-const inspectionOperationConsumer = new InspectionOperationConsumer('inspection') // normal constructors need the argument
+const warehouseOperationConsumer = new WarehouseOperationConsumer('warehouse')
+const inspectionOperationConsumer = new InspectionOperationConsumer('inspection')
 
 const warehouseOperationConsumerRegistration = broker.registerConsumer(warehouseOperationConsumer)
 

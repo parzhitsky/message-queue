@@ -23,9 +23,6 @@ class ConsumerRegistration {
   }
 }
 
-/** @private */
-type ConsumerWithMessageTypeConstructor<out Type extends MessageType, Data> = abstract new () => Consumer<Type, Data>
-
 export class Broker<const out DataMap extends MessageTypeToDataMapAny> {
   protected readonly messageTypeToProducerMap = Object.create(null) as MessageTypeToProducerMap<DataMap>
   protected readonly consumerRegistrations: ConsumerRegistration[] = []
@@ -36,16 +33,6 @@ export class Broker<const out DataMap extends MessageTypeToDataMapAny> {
 
   protected getOrCreateProducer<const Type extends MessageTypeOf<DataMap>>(messageType: Type): ProducerByMessageType<DataMap, Type> {
     return this.messageTypeToProducerMap[messageType] ??= new Producer<Type, DataMap[Type]>(messageType)
-  }
-
-  getConsumerBaseClassForMessageType<const Type extends MessageTypeOf<DataMap>>(messageType: Type): ConsumerWithMessageTypeConstructor<Type, DataMap[Type]> {
-    abstract class ConsumerWithMessageType extends Consumer<Type, DataMap[Type]> {
-      constructor() {
-        super(messageType)
-      }
-    }
-
-    return ConsumerWithMessageType
   }
 
   registerConsumer<const Type extends MessageTypeOf<DataMap>>(consumer: ConsumerByMessageType<DataMap, Type>): ConsumerRegistration {
