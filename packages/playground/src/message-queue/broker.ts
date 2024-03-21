@@ -57,22 +57,34 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     return this
   }
 
-  removeProducer(producer: ProducerByDataMap<DataMap>): void {
-    const index = this.producers.indexOf(producer)
+  /**
+   * Cancels and deletes all message broadcasting for the given producer, if any.
+   */
+  protected stopProducer(producer: ProducerByDataMap<DataMap>): void {
+    const messagesList = this.getMessagesList(producer)
 
-    if (index === -1) {
+    if (messagesList == null) {
       return
     }
 
-    this.producers.splice(index, 1)
+    const messagesListDeleted = messagesList.splice(0, messagesList.length)
 
-    const messagesList = this.getMessagesList(producer)
-
-    for (const messages of messagesList ?? []) {
+    for (const messages of messagesListDeleted) {
       messages.cancel()
     }
+  }
 
-    this.messagesLists.delete(producer)
+  /**
+   * Stops all message broadcasting (if any) and removes the producer.
+   */
+  removeProducer(producer: ProducerByDataMap<DataMap>): void {
+    const index = this.producers.indexOf(producer)
+
+    if (index !== -1) {
+      this.producers.splice(index, 1)
+    }
+
+    this.stopProducer(producer)
   }
 
   removeConsumer(consumer: ConsumerByDataMap<DataMap>): void {
@@ -83,6 +95,9 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     }
   }
 
+  /**
+   * Iterates over all consumers, feeds a given message to consumers which can consume it.
+   */
   protected async broadcastMessages(messages: MessagesByDataMap<DataMap>): Promise<void> {
     for await (const message of messages) {
       for (const consumer of this.consumers) {
@@ -93,6 +108,9 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     }
   }
 
+  /**
+   * Iterates over all producers, broadcasts their messages to corresponding consumers.
+   */
   start(): this {
     if (!this.started) {
       for (const producer of this.producers) {
@@ -108,13 +126,12 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     return this
   }
 
+  /**
+   * Stops all message broadcasting, if any
+   */
   stop(): void {
     for (const producer of this.producers) {
-      this.removeProducer(producer)
-    }
-
-    for (const consumer of this.consumers) {
-      this.removeConsumer(consumer)
+      this.stopProducer(producer)
     }
 
     this.started = false
