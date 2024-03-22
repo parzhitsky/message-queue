@@ -120,9 +120,9 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
         this.getOrCreateMessagesList(producer).push(messages)
         this.broadcastMessages(messages)
       }
-    }
 
-    this.started = true
+      this.started = true
+    }
 
     return this
   }
