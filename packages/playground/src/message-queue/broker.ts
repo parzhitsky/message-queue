@@ -110,6 +110,7 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
 
   /**
    * Iterates over all producers, broadcasts their messages to corresponding consumers.
+   * The operation is idempotent; starting an already started broker is a no-op.
    */
   start(): this {
     if (!this.started) {
