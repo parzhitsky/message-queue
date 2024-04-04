@@ -8,13 +8,13 @@
     "packages/*"
   ],
   "scripts": {
-    "play": "npm start -w playground",
-    "start": "npm run && exit 1"
+    "play": "npm -w playground run dev"
   },
   "overrides": {
     "@types/node": "$@types/node"
   },
   "devDependencies": {
-    "@types/node": "^18"
+    "@types/node": "^18",
+    "typescript": "5.4.3"
   }
 }
