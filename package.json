@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "play": "npm -w playground run dev"
+    "play": "npm -w playground run dev",
+    "build": "npm -w shared run build && npm -w playground run build"
   },
   "overrides": {
     "@types/node": "$@types/node"
