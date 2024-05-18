@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "play": "npm -w playground run dev",
-    "build": "npm -w shared run build && npm -w playground run build"
+    "build": "git submodule foreach \"npm run build\" && npm -w shared run build && npm -w playground run build"
   },
   "overrides": {
     "@types/node": "$@types/node"
