@@ -67,7 +67,7 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
       return
     }
 
-    const messagesListDeleted = messagesList.splice(0, messagesList.length)
+    const messagesListDeleted = messagesList.splice(0)
 
     for (const messages of messagesListDeleted) {
       messages.cancel()
