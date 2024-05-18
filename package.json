@@ -2,6 +2,7 @@
   "name": "playground",
   "version": "0.0.1",
   "author": "Dmytro Parzhytskyi <parzhitsky@gmail.com>",
+  "type": "module",
   "private": true,
   "repository": "https://github.com/parzhitsky/playground",
   "workspaces": [
