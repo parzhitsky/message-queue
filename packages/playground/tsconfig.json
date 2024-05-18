@@ -4,6 +4,7 @@
     { "path": "../shared/tsconfig.build.json" },
   ],
   "compilerOptions": {
+    "composite": true,
     "outDir": "dist",
     "noEmit": false,
 
