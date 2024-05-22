@@ -26,7 +26,7 @@ type MessagesByDataMap<
 export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
   protected readonly producers: ProducerByDataMap<DataMap>[] = []
   protected readonly consumers: ConsumerByDataMap<DataMap>[] = []
-  protected readonly messagesLists = new WeakMap<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
+  protected readonly messagesLists = new Map<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
   protected started = false
 
   protected getMessagesList<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): MessagesByDataMap<DataMap, Type>[] | null {
