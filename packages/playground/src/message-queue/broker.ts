@@ -24,8 +24,8 @@ type MessagesByDataMap<
   Messages<Type, DataMap[Type]>
 
 export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
-  protected readonly producers: ProducerByDataMap<DataMap>[] = []
-  protected readonly consumers: ConsumerByDataMap<DataMap>[] = []
+  protected readonly producers = new Set<ProducerByDataMap<DataMap>>()
+  protected readonly consumers = new Set<ConsumerByDataMap<DataMap>>()
   protected readonly messagesLists = new Map<ProducerByDataMap<DataMap>, MessagesByDataMap<DataMap>[]>()
   protected started = false
 
@@ -45,14 +45,20 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
     return messagesList
   }
 
+  /**
+   * Adds a producer. Adding the same producer instance again is a no-op.
+   */
   addProducer<const Type extends MessageTypeOf<DataMap>>(producer: ProducerByDataMap<DataMap, Type>): this {
-    this.producers.push(producer)
+    this.producers.add(producer)
 
     return this
   }
 
+  /**
+   * Adds a consumer. Adding the same consumer instance again is a no-op.
+   */
   addConsumer<const Type extends MessageTypeOf<DataMap>>(consumer: ConsumerByDataMap<DataMap, Type>): this {
-    this.consumers.push(consumer)
+    this.consumers.add(consumer)
 
     return this
   }
@@ -78,21 +84,12 @@ export class Broker<const DataMap extends MessageTypeToDataMapUnknown> {
    * Stops all message broadcasting (if any) and removes the producer.
    */
   removeProducer(producer: ProducerByDataMap<DataMap>): void {
-    const index = this.producers.indexOf(producer)
-
-    if (index !== -1) {
-      this.producers.splice(index, 1)
-    }
-
+    this.producers.delete(producer)
     this.stopProducer(producer)
   }
 
   removeConsumer(consumer: ConsumerByDataMap<DataMap>): void {
-    const index = this.consumers.indexOf(consumer)
-
-    if (index !== -1) {
-      this.consumers.splice(index, 1)
-    }
+    this.consumers.delete(consumer)
   }
 
   /**
