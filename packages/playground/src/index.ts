@@ -96,7 +96,7 @@ class WarehouseOperationProducer extends Producer<MessageType.Warehouse, Warehou
 
 class InspectionOperationProducer extends Producer<MessageType.Inspection, InspectionOperation> {}
 
-class WarehouseOperationConsumer extends Consumer<MessageType.Warehouse, WarehouseOperation> {
+class WarehouseOperator extends Consumer<MessageType.Warehouse, WarehouseOperation> {
   protected override doConsume(message: Message<MessageType.Warehouse, WarehouseOperation>): void {
     const { operation, item, quantity } = message.data
 
@@ -116,29 +116,32 @@ class WarehouseOperationConsumer extends Consumer<MessageType.Warehouse, Warehou
   }
 }
 
-class InspectionOperationConsumer extends Consumer<MessageType.Inspection, InspectionOperation> {
+class WarehouseCleanupCrew extends Consumer<MessageType.Inspection, InspectionOperation> {
   protected override doConsume(message: Message<MessageType.Inspection, InspectionOperation>): void {
-    switch (message.data.operation) {
-      case 'prepare':
-        console.log(cleanWarehouse(warehouse))
-        logWarehouse(warehouse)
-        break
+    if (message.data.operation === 'prepare') {
+      console.log(cleanWarehouse(warehouse))
+      logWarehouse(warehouse)
+    }
+  }
+}
 
-      case 'inspect':
-        console.log(
-          WarehouseInspector
-            .getByName(message.data.inspectorName)
-            .inspect(warehouse)
-        )
-        break
+class InspectionCompany extends Consumer<MessageType.Inspection, InspectionOperation> {
+  protected override doConsume(message: Message<MessageType.Inspection, InspectionOperation>): void {
+    if (message.data.operation === 'inspect') {
+      console.log(
+        WarehouseInspector
+          .getByName(message.data.inspectorName)
+          .inspect(warehouse)
+      )
     }
   }
 }
 
 const warehouseOperationProducer = new WarehouseOperationProducer(MessageType.Warehouse)
 const inspectionOperationProducer = new InspectionOperationProducer(MessageType.Inspection)
-const warehouseOperationConsumer = new WarehouseOperationConsumer(MessageType.Warehouse)
-const inspectionOperationConsumer = new InspectionOperationConsumer(MessageType.Inspection)
+const warehouseOperator = new WarehouseOperator(MessageType.Warehouse)
+const warehouseCleanupCrew = new WarehouseCleanupCrew(MessageType.Inspection)
+const inspectionCompany = new InspectionCompany(MessageType.Inspection)
 
 type DataMap = {
   [MessageType.Warehouse]: WarehouseOperation
@@ -148,8 +151,9 @@ type DataMap = {
 const broker = new Broker<DataMap>()
   .addProducer(warehouseOperationProducer)
   .addProducer(inspectionOperationProducer)
-  .addConsumer(warehouseOperationConsumer)
-  .addConsumer(inspectionOperationConsumer)
+  .addConsumer(warehouseOperator)
+  .addConsumer(warehouseCleanupCrew)
+  .addConsumer(inspectionCompany)
   .start()
 
 // ***
@@ -159,7 +163,7 @@ const inspectorNames = ['Alice', 'Bob', 'Charlie'] as const
 
 enum CliCommand {
   Quit = '.q',
-  Unregister = '.u',
+  FireCleanupCrew = '.f',
   Log = '.l',
   Add = 'a',
   Remove = 'r',
@@ -189,8 +193,8 @@ for await (const line of cli) {
       broker.stop()
       break loop
 
-    case CliCommand.Unregister:
-      broker.removeConsumer(inspectionOperationConsumer)
+    case CliCommand.FireCleanupCrew:
+      broker.removeConsumer(warehouseCleanupCrew)
       break
 
     case CliCommand.Log:
