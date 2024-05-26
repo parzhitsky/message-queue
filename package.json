@@ -18,6 +18,6 @@
   "TODO: update '@types/node' to '^22' once is it available": null,
   "devDependencies": {
     "@types/node": "^20",
-    "typescript": "5.4.3"
+    "typescript": "5.4.5"
   }
 }
