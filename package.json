@@ -15,8 +15,9 @@
   "overrides": {
     "@types/node": "$@types/node"
   },
+  "TODO: update '@types/node' to '^22' once is it available": null,
   "devDependencies": {
-    "@types/node": "^18",
+    "@types/node": "^20",
     "typescript": "5.4.3"
   }
 }
